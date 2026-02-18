@@ -9,12 +9,22 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@monaco-editor/react": "^4.7.0",
+    "@supabase/supabase-js": "^2.95.3",
+    "@svgr/core": "^8.1.0",
+    "fast-xml-parser": "^5.3.6",
+    "he": "^1.2.0",
+    "js-yaml": "^4.1.1",
+    "json-to-ts": "^2.1.0",
+    "json-to-zod": "^1.1.2",
     "next": "16.1.6",
+    "quicktype-core": "^23.2.6",
     "react": "19.2.3",
     "react-dom": "19.2.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/js-yaml": "^4.0.9",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
