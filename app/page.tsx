@@ -298,7 +298,7 @@ export default function ConverterPage() {
           <a href="https://github.com/ShakhorChowdhury/dev-converter" target="_blank" rel="noopener noreferrer" className="font-bold px-4 bg-black/20 text-[14px] hover:text-white transition-colors flex items-center gap-1.5">
               GitHub 
           </a>
-          <a href="#" target="_blank" rel="noopener noreferrer" className="hover:text-green-300 hover:scale-105 px-4 py-2 text-[14px] transition-colors">
+          <a href="https://shakkhor.vercel.app/" target="_blank" rel="noopener noreferrer" className="hover:text-green-300 hover:scale-105 px-4 py-2 text-[14px] transition-colors">
             by Shakkhor
           </a>
         </div>
