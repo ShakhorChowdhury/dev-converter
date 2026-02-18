@@ -16,7 +16,6 @@ interface Conversion {
   user_id: string;
 }
 
-// Define the editor type from Monaco
 type MonacoEditor = Parameters<OnMount>[0];
 
 const placeholders: Record<string, { input: string; output: string }> = {
@@ -83,28 +82,39 @@ const categories = [
 ];
 
 export default function ConverterPage() {
-  // SET INITIAL STATE TO TOP ITEM DYNAMICALLY
-  const initialId = categories[0].languages[0].id; 
+  const initialId = categories[0].languages[0].id;
 
   const [targetLang, setTargetLang] = useState(initialId);
   const [inputCode, setInputCode] = useState(placeholders[initialId]?.input || '');
   const [outputCode, setOutputCode] = useState(placeholders[initialId]?.output || '');
-  
   const [copied, setCopied] = useState(false);
   const [history, setHistory] = useState<Conversion[]>([]);
   const [user, setUser] = useState<User | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isMounted, setIsMounted] = useState(false); // New: Prevents theme flicker
   const editorRef = useRef<MonacoEditor | null>(null);
 
-  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('theme') as 'dark' | 'light' | null;
-      if (saved) return saved;
-      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  // 1. Initial Theme Logic (Server-safe)
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+
+  // 2. Handle Initialization (Theme, Hash, Auth)
+  useEffect(() => {
+    setIsMounted(true);
+    
+    // Clean up URL Hash (the /# issue)
+    if (window.location.hash) {
+      window.history.replaceState(null, '', window.location.pathname);
     }
-    return 'dark';
-  });
+
+    // Restore Theme from localStorage
+    const savedTheme = localStorage.getItem('theme') as 'dark' | 'light' | null;
+    if (savedTheme) {
+      setTheme(savedTheme);
+    } else if (window.matchMedia('(prefers-color-scheme: light)').matches) {
+      setTheme('light');
+    }
+  }, []);
 
   const handleEditorDidMount: OnMount = (editor) => {
     editorRef.current = editor;
@@ -139,9 +149,6 @@ export default function ConverterPage() {
     if (placeholders[id]) {
       setInputCode(placeholders[id].input);
       setOutputCode(placeholders[id].output);
-    } else {
-      setInputCode('');
-      setOutputCode('');
     }
     if (window.innerWidth < 1024) setIsSidebarOpen(false);
   };
@@ -153,7 +160,7 @@ export default function ConverterPage() {
     if (targetLang === 'tailwind' || targetLang === 'css_obj') input = 'css';
     if (targetLang === 'sql') output = 'sql';
     if (targetLang === 'graphql') output = 'graphql';
-    if (targetLang === 'jsx' || targetLang === 'html_jsx' || targetLang === 'svg_tailwind' || targetLang === 'css_obj' || targetLang === 'curl_fetch') output = 'javascript';
+    if (['jsx', 'html_jsx', 'svg_tailwind', 'css_obj', 'curl_fetch'].includes(targetLang)) output = 'javascript';
     if (targetLang === 'curl_fetch') input = 'shell';
     return { input, output };
   };
@@ -162,7 +169,11 @@ export default function ConverterPage() {
 
   const fetchHistory = useCallback(async (userId: string | undefined) => {
     if (!userId) { setHistory([]); return; }
-    const { data, error: dbError } = await supabase.from('conversions').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(15);
+    const { data, error: dbError } = await supabase.from('conversions')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(15);
     if (!dbError && data) setHistory(data as Conversion[]);
   }, []);
 
@@ -276,15 +287,18 @@ export default function ConverterPage() {
     setOutputCode('');
   };
 
+  // Prevent UI flashing during hydration
+  if (!isMounted) return <div className="h-screen w-full bg-[#1e1e1e]" />;
+
   return (
     <main className={`font-google h-screen w-full flex flex-col transition-colors duration-300 ${theme === 'dark' ? 'bg-[#1e1e1e] text-white' : 'bg-gray-50 text-gray-900'}`}>
       
       <div className="h-10 bg-emerald-900 flex items-center justify-between px-6 z-60 shrink-0 text-white font-medium tracking-wide">
         <div className="flex w-full justify-end lg:gap-6 ">
-          <a href="https://github.com/your-username/repo" target="_blank" rel="noopener noreferrer" className="font-bold px-4 bg-black/20 text-[14px] hover:text-white transition-colors flex items-center gap-1.5">
+          <a href="https://github.com/ShakhorChowdhury/dev-converter" target="_blank" rel="noopener noreferrer" className="font-bold px-4 bg-black/20 text-[14px] hover:text-white transition-colors flex items-center gap-1.5">
               GitHub 
           </a>
-          <a href="https://shakkhor.vercel.app/" target="_blank" rel="noopener noreferrer" className="hover:text-green-300 hover:scale-105 px-4 py-2 text-[14px] transition-colors">
+          <a href="#" target="_blank" rel="noopener noreferrer" className="hover:text-green-300 hover:scale-105 px-4 py-2 text-[14px] transition-colors">
             by Shakkhor
           </a>
         </div>
@@ -368,7 +382,7 @@ export default function ConverterPage() {
               </div>
             ) : (
               <div className={`p-3 rounded border ${theme === 'dark' ? 'bg-[#2d2d2d] border-gray-600' : 'bg-gray-50 border-gray-200'}`}>
-                <p className="text-[10px] text-gray-500 truncate mb-2">{user.email}</p>
+                <p className="text-[12px] text-center text-gray-500 truncate mb-2">{user.email}</p>
                 <button onClick={() => supabase.auth.signOut()} className="w-full text-red-500 py-1.5 rounded text-[10px] font-bold hover:bg-red-500/10 transition">Sign Out</button>
               </div>
             )}
@@ -396,7 +410,7 @@ export default function ConverterPage() {
                   value={inputCode} 
                   onMount={handleEditorDidMount}
                   onChange={v => setInputCode(v || '')} 
-                  options={{ minimap: { enabled: false }, automaticLayout: true, fontSize: 15, formatOnPaste: true }} 
+                  options={{ minimap: { enabled: false }, automaticLayout: true, fontSize: 15 }} 
                 />
               </div>
             </div>
@@ -407,7 +421,7 @@ export default function ConverterPage() {
                    {currentInfo.label.replace('to ', '')}
                 </span>
                 <button onClick={copyToClipboard} className={`flex items-center gap-2 text-[12px] md:text-[14px] px-3 py-1 rounded font-semibold transition-all ${copied ? 'bg-green-600 text-white' : 'bg-green-800 text-white'}`}>
-                  <span><Image src="/icons/copy (1).png" alt="Copy" width={14} height={14} /></span>{copied ? 'Copied!' : 'Copy Snippet'}
+                  Copy Snippet
                 </button>
               </div>
               <div className="flex-1 min-h-0 pt-2">
